@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gym Management System - DBMS Mini-Project</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .landing-hero {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            padding: 60px 20px 40px;
+            text-align: center;
+        }
+        .hero-title {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+        .hero-badge {
+            display: inline-block;
+            background: rgba(37, 99, 235, 0.2);
+            border: 1px solid rgba(37, 99, 235, 0.4);
+            color: #60a5fa;
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 18px;
+            text-transform: uppercase;
+        }
+        .auth-container {
+            max-width: 480px;
+            margin: -30px auto 40px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--slate-border);
+            overflow: hidden;
+        }
+        .auth-tabs {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--slate-border);
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--slate);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .auth-tab.active {
+            background: white;
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+        .role-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            padding: 6px;
+            border-radius: 10px;
+        }
+        .role-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--slate);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .role-btn.active {
+            background: white;
+            color: var(--dark);
+            box-shadow: var(--shadow-sm);
+        }
+        .quick-demo-box {
+            max-width: 900px;
+            margin: 0 auto 50px;
+            padding: 0 20px;
+        }
+        .demo-roles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .demo-card {
+            background: white;
+            border: 1px solid var(--slate-border);
+            border-radius: 10px;
+            padding: 18px;
+            text-align: left;
+            transition: var(--transition);
+        }
+        .demo-card:hover {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-md);
+        }
+        .demo-card h4 {
+            font-size: 15px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .demo-card p {
+            font-size: 13px;
+            color: var(--slate);
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Landing Banner -->
+    <div class="landing-hero">
+        <span class="hero-badge">DBMS Mini-Project &bull; MySQL 8.0 &bull; Java Spring Boot</span>
+        <h1 class="hero-title">&#127947;&#65039; Gym Management System</h1>
+        <p style="color: #94a3b8; max-width: 650px; margin: 0 auto; font-size: 15px;">
+            A complete role-based enterprise database project featuring 12 relational tables, transactions, daily recurring bookings, trainer scheduling, and QR access gate verification.
+        </p>
+    </div>
+
+    <!-- Login / Registration Card -->
+    <div class="auth-container">
+        <div class="auth-tabs">
+            <div class="auth-tab active" onclick="switchAuthTab('login')">Sign In</div>
+            <div class="auth-tab" onclick="switchAuthTab('register')">Register as Member</div>
+        </div>
+
+        <div style="padding: 28px;">
+            <!-- LOGIN FORM -->
+            <div id="login-section">
+                <label class="form-label">Select Your Role</label>
+                <div class="role-selector">
+                    <button type="button" class="role-btn active" id="role-admin" onclick="selectRole('ADMIN')">&#128081; Admin</button>
+                    <button type="button" class="role-btn" id="role-trainer" onclick="selectRole('TRAINER')">&#128170; Trainer</button>
+                    <button type="button" class="role-btn" id="role-customer" onclick="selectRole('CUSTOMER')">&#128100; Customer</button>
+                </div>
+
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="loginEmail" class="form-control" placeholder="admin@gym.com" required value="admin@gym.com">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required value="admin123">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px;">
+                        Sign In to Dashboard &rarr;
+                    </button>
+                </form>
+            </div>
+
+            <!-- REGISTRATION FORM -->
+            <div id="register-section" style="display: none;">
+                <form id="registerForm" onsubmit="handleRegister(event)">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="regName" class="form-control" placeholder="e.g. Ramesh Chandra" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="regEmail" class="form-control" placeholder="ramesh@gmail.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="regPassword" class="form-control" placeholder="Create a secure password" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone Number</label>
+                        <input type="tel" id="regPhone" class="form-control" placeholder="9876543210" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" id="regAddress" class="form-control" placeholder="Street, Locality, City" required>
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 10px; padding: 12px;">
+                        Complete Registration &rarr;
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Demo Accounts for College Evaluation Viva -->
+    <div class="quick-demo-box">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+            <h3 style="font-size: 18px;">&#9889; One-Click Demo Logins for Viva Presentation</h3>
+            <span style="font-size: 13px; color: var(--slate);">Pre-seeded MySQL Indian records</span>
+        </div>
+        <div class="demo-roles-grid">
+            <div class="demo-card">
+                <h4>Admin Vikram <span class="badge badge-info">Admin</span></h4>
+                <p>Email: <b>admin@gym.com</b><br>Pass: <b>admin123</b></p>
+                <button class="btn btn-sm btn-outline" style="width:100%" onclick="quickFill('admin@gym.com', 'admin123', 'ADMIN')">
+                    Fill &amp; Login &rarr;
+                </button>
+            </div>
+            <div class="demo-card">
+                <h4>Trainer Ravi Kumar <span class="badge badge-warning">Trainer</span></h4>
+                <p>Strength Coach &bull; &#8377;55,000<br>Email: <b>ravi@gym.com</b></p>
+                <button class="btn btn-sm btn-outline" style="width:100%" onclick="quickFill('ravi@gym.com', 'trainer123', 'TRAINER')">
+                    Fill &amp; Login &rarr;
+                </button>
+            </div>
+            <div class="demo-card">
+                <h4>Customer Rahul Verma <span class="badge badge-success">Customer</span></h4>
+                <p>Annual VIP Member &bull; QR Active<br>Email: <b>rahul@gmail.com</b></p>
+                <button class="btn btn-sm btn-outline" style="width:100%" onclick="quickFill('rahul@gmail.com', 'customer123', 'CUSTOMER')">
+                    Fill &amp; Login &rarr;
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live QR Entry Gate Scanner Simulator -->
+    <div style="max-width: 900px; margin: 0 auto 60px; padding: 0 20px;">
+        <div class="card">
+            <div class="card-header">
+                <h2>&#128682; Gym Entry Turnstile Gate &bull; QR Verification Scanner</h2>
+                <span class="badge badge-secondary">Hardware Gate Simulator</span>
+            </div>
+            <div class="card-body">
+                <p style="font-size: 14px; color: var(--slate); margin-bottom: 16px;">
+                    Test turnstile access verification for any QR access token. Demonstrates real-time validation of: QR Existence &rarr; QR Status Active &rarr; Membership Active &rarr; Current Date within Plan Validity.
+                </p>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <input type="text" id="gateScanInput" class="form-control" placeholder="Enter QR Token e.g. QR-GMS-CUST1-TOKEN" value="QR-GMS-CUST1-TOKEN">
+                    <button class="btn btn-primary" onclick="simulateGateScan()">Scan / Verify &rarr;</button>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                    <span style="font-size: 12px; color: var(--slate); align-self: center;">Try Sample Tokens:</span>
+                    <button class="btn btn-sm btn-outline" onclick="setToken('QR-GMS-CUST1-TOKEN')">Rahul (Active VIP)</button>
+                    <button class="btn btn-sm btn-outline" onclick="setToken('QR-GMS-CUST6-TOKEN')">Sneha (Expired Plan)</button>
+                    <button class="btn btn-sm btn-outline" onclick="setToken('INVALID-TEST-TOKEN')">Invalid Fake Token</button>
+                </div>
+
+                <div id="gateResultDisplay" class="gate-screen" style="display: none;">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script>
+        let currentRole = 'ADMIN';
+
+        function selectRole(role) {
+            currentRole = role;
+            document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('role-' + role.toLowerCase()).classList.add('active');
+
+            const emailInput = document.getElementById('loginEmail');
+            const passInput = document.getElementById('loginPassword');
+
+            if (role === 'ADMIN') {
+                emailInput.value = 'admin@gym.com';
+                passInput.value = 'admin123';
+            } else if (role === 'TRAINER') {
+                emailInput.value = 'ravi@gym.com';
+                passInput.value = 'trainer123';
+            } else {
+                emailInput.value = 'rahul@gmail.com';
+                passInput.value = 'customer123';
+            }
+        }
+
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            if (tab === 'login') {
+                document.querySelectorAll('.auth-tab')[0].classList.add('active');
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('register-section').style.display = 'none';
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
+                document.getElementById('login-section').style.display = 'none';
+                document.getElementById('register-section').style.display = 'block';
+            }
+        }
+
+        function quickFill(email, pwd, role) {
+            selectRole(role);
+            document.getElementById('loginEmail').value = email;
+            document.getElementById('loginPassword').value = pwd;
+            handleLogin(new Event('submit'));
+        }
+
+        async function handleLogin(e) {
+            if (e) e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const res = await GymAPI.login(email, password, currentRole);
+                if (res.success) {
+                    GymAPI.setUser({
+                        userId: res.userId,
+                        name: res.name,
+                        email: res.email,
+                        role: res.role
+                    });
+                    showToast('Login successful! Redirecting...', 'success');
+
+                    setTimeout(() => {
+                        if (res.role === 'ADMIN') window.location.href = 'admin.html';
+                        else if (res.role === 'TRAINER') window.location.href = 'trainer.html';
+                        else window.location.href = 'customer.html';
+                    }, 600);
+                }
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            const phone = document.getElementById('regPhone').value;
+            const address = document.getElementById('regAddress').value;
+
+            try {
+                const res = await GymAPI.register(name, email, password, phone, address);
+                showToast(res.message, 'success');
+                switchAuthTab('login');
+                selectRole('CUSTOMER');
+                document.getElementById('loginEmail').value = email;
+                document.getElementById('loginPassword').value = password;
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function setToken(tok) {
+            document.getElementById('gateScanInput').value = tok;
+            simulateGateScan();
+        }
+
+        async function simulateGateScan() {
+            const token = document.getElementById('gateScanInput').value.trim();
+            const disp = document.getElementById('gateResultDisplay');
+            disp.style.display = 'flex';
+
+            try {
+                const res = await GymAPI.verifyQrAccess(token);
+                if (res.granted) {
+                    disp.innerHTML = `
+                        <div class="gate-status-text granted">&#10004; ACCESS GRANTED</div>
+                        <p style="color: #6ee7b7; margin-top: 8px; font-size: 15px;">${res.message}</p>
+                        <p style="color: #cbd5e1; font-size: 13px; margin-top: 4px;">
+                            Member: <b>${res.customerName}</b> &bull; Plan: <b>${res.planName}</b> &bull; Valid Until: <b>${res.validUntil}</b>
+                        </p>
+                    `;
+                } else {
+                    disp.innerHTML = `
+                        <div class="gate-status-text denied">&#10008; ACCESS DENIED</div>
+                        <p style="color: #fca5a5; margin-top: 8px; font-size: 15px;">${res.message}</p>
+                    `;
+                }
+            } catch (err) {
+                disp.innerHTML = `
+                    <div class="gate-status-text denied">&#10008; SCAN ERROR</div>
+                    <p style="color: #fca5a5; margin-top: 8px;">${err.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

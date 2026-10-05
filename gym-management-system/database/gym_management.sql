@@ -1,0 +1,639 @@
+-- ============================================================================
+-- GYM MANAGEMENT SYSTEM - DATABASE SCHEMA & INITIALIZATION SCRIPT
+-- Subject: Database Management Systems (DBMS Mini-Project)
+-- Database Engine: MySQL 8.0+
+-- ============================================================================
+
+-- Step 1: Create and select database
+DROP DATABASE IF EXISTS gym_management;
+CREATE DATABASE gym_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE gym_management;
+
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- Step 2: Drop existing tables (in reverse dependency order if any)
+DROP TABLE IF EXISTS gym_access_qr;
+DROP TABLE IF EXISTS equipment_request;
+DROP TABLE IF EXISTS equipment;
+DROP TABLE IF EXISTS booking_slot;
+DROP TABLE IF EXISTS booking;
+DROP TABLE IF EXISTS trainer_request;
+DROP TABLE IF EXISTS trainer_slot;
+DROP TABLE IF EXISTS payment;
+DROP TABLE IF EXISTS membership;
+DROP TABLE IF EXISTS customer;
+DROP TABLE IF EXISTS trainer;
+DROP TABLE IF EXISTS admin;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================================================
+-- TABLE 1: ADMIN
+-- Holds administrative credentials and profiles.
+-- ============================================================================
+CREATE TABLE admin (
+    admin_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 2: TRAINER
+-- Holds trainer qualifications, specializations, salaries, and availability.
+-- ============================================================================
+CREATE TABLE trainer (
+    trainer_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    specialization VARCHAR(100) NOT NULL,
+    experience_years INT NOT NULL CHECK (experience_years >= 0),
+    qualification VARCHAR(100) NOT NULL,
+    salary DECIMAL(10,2) NOT NULL CHECK (salary >= 0),
+    availability_status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' 
+        CHECK (availability_status IN ('AVAILABLE', 'BUSY', 'ON_LEAVE')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 3: CUSTOMER
+-- Holds registered gym members/clients.
+-- ============================================================================
+CREATE TABLE customer (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    address VARCHAR(255) NOT NULL,
+    registration_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 4: MEMBERSHIP
+-- Connects a customer to their membership plan and validity period.
+-- ============================================================================
+CREATE TABLE membership (
+    membership_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    plan_name VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' 
+        CHECK (status IN ('ACTIVE', 'EXPIRED', 'PENDING', 'CANCELLED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_membership_customer FOREIGN KEY (customer_id) 
+        REFERENCES customer(customer_id) ON DELETE CASCADE,
+    CONSTRAINT chk_membership_dates CHECK (end_date >= start_date)
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 5: PAYMENT
+-- Records financial transactions for membership plans.
+-- ============================================================================
+CREATE TABLE payment (
+    payment_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    membership_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL CHECK (amount >= 0),
+    payment_date DATETIME NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    payment_status VARCHAR(20) NOT NULL DEFAULT 'SUCCESS' 
+        CHECK (payment_status IN ('SUCCESS', 'PENDING', 'FAILED')),
+    transaction_reference VARCHAR(100) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_payment_customer FOREIGN KEY (customer_id) 
+        REFERENCES customer(customer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_payment_membership FOREIGN KEY (membership_id) 
+        REFERENCES membership(membership_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 6: TRAINER_SLOT
+-- Available daily time slots generated by or assigned to trainers.
+-- ============================================================================
+CREATE TABLE trainer_slot (
+    slot_id INT AUTO_INCREMENT PRIMARY KEY,
+    trainer_id INT NOT NULL,
+    slot_date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' 
+        CHECK (status IN ('AVAILABLE', 'BOOKED', 'BLOCKED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_slot_trainer FOREIGN KEY (trainer_id) 
+        REFERENCES trainer(trainer_id) ON DELETE CASCADE,
+    CONSTRAINT uk_trainer_date_time UNIQUE (trainer_id, slot_date, start_time)
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 7: TRAINER_REQUEST
+-- Customer requests sent to trainers for personalized coaching slots.
+-- ============================================================================
+CREATE TABLE trainer_request (
+    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    trainer_id INT NOT NULL,
+    slot_id INT NOT NULL,
+    request_date DATE NOT NULL,
+    message TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' 
+        CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_request_customer FOREIGN KEY (customer_id) 
+        REFERENCES customer(customer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_request_trainer FOREIGN KEY (trainer_id) 
+        REFERENCES trainer(trainer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_request_slot FOREIGN KEY (slot_id) 
+        REFERENCES trainer_slot(slot_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 8: BOOKING
+-- Master booking record for customer-trainer sessions.
+-- ============================================================================
+CREATE TABLE booking (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    trainer_id INT NOT NULL,
+    request_id INT NULL,
+    booking_type VARCHAR(20) NOT NULL 
+        CHECK (booking_type IN ('ONE_DAY', 'DAILY')),
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    created_at DATETIME NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'CONFIRMED' 
+        CHECK (status IN ('CONFIRMED', 'CANCELLED', 'COMPLETED')),
+    CONSTRAINT fk_booking_customer FOREIGN KEY (customer_id) 
+        REFERENCES customer(customer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_booking_trainer FOREIGN KEY (trainer_id) 
+        REFERENCES trainer(trainer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_booking_request FOREIGN KEY (request_id) 
+        REFERENCES trainer_request(request_id) ON DELETE SET NULL,
+    CONSTRAINT chk_booking_dates CHECK (end_date >= start_date)
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 9: BOOKING_SLOT
+-- Line items for daily/recurring bookings (1 entry per scheduled calendar day).
+-- ============================================================================
+CREATE TABLE booking_slot (
+    booking_slot_id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    slot_id INT NOT NULL,
+    booking_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'BOOKED' 
+        CHECK (status IN ('BOOKED', 'CANCELLED', 'COMPLETED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bslot_booking FOREIGN KEY (booking_id) 
+        REFERENCES booking(booking_id) ON DELETE CASCADE,
+    CONSTRAINT fk_bslot_slot FOREIGN KEY (slot_id) 
+        REFERENCES trainer_slot(slot_id) ON DELETE CASCADE,
+    CONSTRAINT uk_booking_slot_date UNIQUE (slot_id, booking_date)
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 10: EQUIPMENT
+-- Inventory tracking of gym machinery and accessories.
+-- ============================================================================
+CREATE TABLE equipment (
+    equipment_id INT AUTO_INCREMENT PRIMARY KEY,
+    equipment_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    total_quantity INT NOT NULL CHECK (total_quantity >= 0),
+    available_quantity INT NOT NULL CHECK (available_quantity >= 0),
+    status VARCHAR(20) NOT NULL DEFAULT 'AVAILABLE' 
+        CHECK (status IN ('AVAILABLE', 'LOW_STOCK', 'OUT_OF_STOCK')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_equipment_qty CHECK (available_quantity <= total_quantity)
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 11: EQUIPMENT_REQUEST
+-- Trainer-initiated requisition for gym equipment reviewed by Admin.
+-- ============================================================================
+CREATE TABLE equipment_request (
+    equipment_request_id INT AUTO_INCREMENT PRIMARY KEY,
+    trainer_id INT NOT NULL,
+    equipment_id INT NOT NULL,
+    quantity INT NOT NULL CHECK (quantity > 0),
+    reason TEXT NOT NULL,
+    priority VARCHAR(20) NOT NULL CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH')),
+    request_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' 
+        CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ereq_trainer FOREIGN KEY (trainer_id) 
+        REFERENCES trainer(trainer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ereq_equipment FOREIGN KEY (equipment_id) 
+        REFERENCES equipment(equipment_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- TABLE 12: GYM_ACCESS_QR
+-- Digital QR entry tokens granted to customers with valid memberships.
+-- ============================================================================
+CREATE TABLE gym_access_qr (
+    qr_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NOT NULL,
+    membership_id INT NOT NULL,
+    qr_token VARCHAR(100) NOT NULL UNIQUE,
+    valid_from DATE NOT NULL,
+    valid_until DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' 
+        CHECK (status IN ('ACTIVE', 'EXPIRED', 'REVOKED')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_qr_customer FOREIGN KEY (customer_id) 
+        REFERENCES customer(customer_id) ON DELETE CASCADE,
+    CONSTRAINT fk_qr_membership FOREIGN KEY (membership_id) 
+        REFERENCES membership(membership_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================================
+-- INDEXES FOR PERFORMANCE OPTIMIZATION
+-- ============================================================================
+CREATE INDEX idx_trainer_specialization ON trainer(specialization);
+CREATE INDEX idx_customer_email ON customer(email);
+CREATE INDEX idx_slot_trainer_date ON trainer_slot(trainer_id, slot_date);
+CREATE INDEX idx_booking_customer ON booking(customer_id);
+CREATE INDEX idx_membership_status ON membership(status);
+CREATE INDEX idx_payment_customer ON payment(customer_id);
+CREATE INDEX idx_qr_token ON gym_access_qr(qr_token);
+
+-- ============================================================================
+-- SAMPLE DATA INSERTION (Indian Context & Realistic ₹ Amounts)
+-- ============================================================================
+
+-- 1. Admins
+INSERT INTO admin (name, email, password) VALUES
+('Vikram Sharma', 'admin@gym.com', 'admin123'),
+('Neha Kapoor', 'neha.admin@gym.com', 'admin123');
+
+-- 2. Trainers (5 Trainers with varied specializations and realistic salaries)
+INSERT INTO trainer (name, email, password, phone, specialization, experience_years, qualification, salary, availability_status) VALUES
+('Ravi Kumar', 'ravi@gym.com', 'trainer123', '9876543210', 'Strength & Conditioning', 7, 'ACE Certified Personal Trainer', 55000.00, 'AVAILABLE'),
+('Priya Patel', 'priya@gym.com', 'trainer123', '9876543211', 'Yoga & Aerobics', 5, 'RYT 500 Certified Yoga Master', 45000.00, 'AVAILABLE'),
+('Amit Singh', 'amit@gym.com', 'trainer123', '9876543212', 'Bodybuilding & Hypertrophy', 8, 'ISSA Elite Trainer', 60000.00, 'AVAILABLE'),
+('Sneha Rao', 'sneha@gym.com', 'trainer123', '9876543213', 'Crossfit & HIIT', 4, 'Crossfit Level 2 Trainer', 42000.00, 'AVAILABLE'),
+('Rajesh Verma', 'rajesh@gym.com', 'trainer123', '9876543214', 'Cardio & Weight Loss', 6, 'K11 Diploma in Personal Training', 48000.00, 'AVAILABLE');
+
+-- 3. Customers (10 Indian Customers)
+INSERT INTO customer (name, email, password, phone, address, registration_date) VALUES
+('Rahul Verma', 'rahul@gmail.com', 'customer123', '9123456780', 'Flat 402, Green Glen Layout, Bellandur, Bengaluru', '2026-01-15'),
+('Ananya Sharma', 'ananya@gmail.com', 'customer123', '9123456781', 'B-12, Sector 62, Noida, Uttar Pradesh', '2026-02-10'),
+('Rohit Patil', 'rohit@gmail.com', 'customer123', '9123456782', 'Flat 101, Shivneri Heights, Kothrud, Pune', '2026-03-05'),
+('Pooja Mehta', 'pooja@gmail.com', 'customer123', '9123456783', '14/A, Marine Drive, Churchgate, Mumbai', '2026-03-20'),
+('Vikram Malhotra', 'vikram@gmail.com', 'customer123', '9123456784', 'C-404, DLF Phase 5, Gurugram, Haryana', '2026-04-12'),
+('Sneha Gupta', 'snehag@gmail.com', 'customer123', '9123456785', '22, Park Street, Kolkata, West Bengal', '2026-05-01'),
+('Arjun Reddy', 'arjun@gmail.com', 'customer123', '9123456786', 'Plot 88, Jubilee Hills, Road No. 36, Hyderabad', '2026-05-18'),
+('Divya Nair', 'divya@gmail.com', 'customer123', '9123456787', 'TC 15/234, Kowdiar, Thiruvananthapuram, Kerala', '2026-06-02'),
+('Siddharth Joshi', 'siddharth@gmail.com', 'customer123', '9123456788', 'B-303, Sunrise Towers, Bodakdev, Ahmedabad', '2026-06-25'),
+('Kavita Mehra', 'kavita@gmail.com', 'customer123', '9123456789', 'H-56, Anna Nagar West, Chennai, Tamil Nadu', '2026-07-10');
+
+-- 4. Memberships (Plans: Monthly ₹1500, Quarterly ₹4000, Half-Yearly ₹7500, Annual ₹12000)
+INSERT INTO membership (customer_id, plan_name, amount, start_date, end_date, status) VALUES
+(1, 'Annual VIP', 12000.00, '2026-01-15', '2027-01-14', 'ACTIVE'),
+(2, 'Quarterly Premium', 4000.00, '2026-08-01', '2026-10-31', 'ACTIVE'),
+(3, 'Monthly Gold', 1500.00, '2026-09-01', '2026-09-30', 'ACTIVE'),
+(4, 'Half-Yearly Elite', 7500.00, '2026-04-01', '2026-09-30', 'ACTIVE'),
+(5, 'Annual VIP', 12000.00, '2026-04-15', '2027-04-14', 'ACTIVE'),
+(6, 'Monthly Gold', 1500.00, '2026-08-01', '2026-08-31', 'EXPIRED'),
+(7, 'Quarterly Premium', 4000.00, '2026-07-01', '2026-09-30', 'ACTIVE'),
+(8, 'Annual VIP', 12000.00, '2026-06-05', '2027-06-04', 'ACTIVE'),
+(9, 'Monthly Gold', 1500.00, '2026-09-10', '2026-10-09', 'ACTIVE'),
+(10, 'Quarterly Premium', 4000.00, '2026-07-15', '2026-10-14', 'ACTIVE');
+
+-- 5. Payments
+INSERT INTO payment (customer_id, membership_id, amount, payment_date, payment_method, payment_status, transaction_reference) VALUES
+(1, 1, 12000.00, '2026-01-15 10:30:00', 'UPI - PhonePe', 'SUCCESS', 'TXN_GMS_20260115001'),
+(2, 2, 4000.00, '2026-08-01 11:15:20', 'Credit Card - HDFC', 'SUCCESS', 'TXN_GMS_20260801002'),
+(3, 3, 1500.00, '2026-09-01 09:45:00', 'UPI - GooglePay', 'SUCCESS', 'TXN_GMS_20260901003'),
+(4, 4, 7500.00, '2026-04-01 14:20:10', 'Net Banking - SBI', 'SUCCESS', 'TXN_GMS_20260401004'),
+(5, 5, 12000.00, '2026-04-15 16:00:00', 'UPI - Paytm', 'SUCCESS', 'TXN_GMS_20260415005'),
+(6, 6, 1500.00, '2026-08-01 18:30:00', 'Debit Card - ICICI', 'SUCCESS', 'TXN_GMS_20260801006'),
+(7, 7, 4000.00, '2026-07-01 12:10:45', 'UPI - PhonePe', 'SUCCESS', 'TXN_GMS_20260701007'),
+(8, 8, 12000.00, '2026-06-05 10:00:00', 'Net Banking - Axis', 'SUCCESS', 'TXN_GMS_20260605008'),
+(9, 9, 1500.00, '2026-09-10 15:45:30', 'UPI - GooglePay', 'SUCCESS', 'TXN_GMS_20260910009'),
+(10, 10, 4000.00, '2026-07-15 17:25:00', 'Credit Card - SBI', 'SUCCESS', 'TXN_GMS_20260715010');
+
+-- 6. Trainer Slots (Dates set for demonstration: 2026-09-28 to 2026-10-05)
+INSERT INTO trainer_slot (trainer_id, slot_date, start_time, end_time, status) VALUES
+-- Ravi Kumar (Strength)
+(1, '2026-09-28', '06:00:00', '07:00:00', 'BOOKED'),
+(1, '2026-09-28', '07:00:00', '08:00:00', 'AVAILABLE'),
+(1, '2026-09-28', '18:00:00', '19:00:00', 'BOOKED'),
+(1, '2026-09-29', '06:00:00', '07:00:00', 'BOOKED'),
+(1, '2026-09-29', '18:00:00', '19:00:00', 'AVAILABLE'),
+(1, '2026-09-30', '06:00:00', '07:00:00', 'BOOKED'),
+(1, '2026-10-01', '06:00:00', '07:00:00', 'BOOKED'),
+(1, '2026-10-02', '06:00:00', '07:00:00', 'BOOKED'),
+-- Priya Patel (Yoga)
+(2, '2026-09-28', '07:00:00', '08:00:00', 'AVAILABLE'),
+(2, '2026-09-28', '08:00:00', '09:00:00', 'AVAILABLE'),
+(2, '2026-09-28', '17:00:00', '18:00:00', 'BOOKED'),
+(2, '2026-09-29', '07:00:00', '08:00:00', 'AVAILABLE'),
+-- Amit Singh (Bodybuilding)
+(3, '2026-09-28', '06:00:00', '07:00:00', 'AVAILABLE'),
+(3, '2026-09-28', '19:00:00', '20:00:00', 'BOOKED'),
+(3, '2026-09-29', '19:00:00', '20:00:00', 'AVAILABLE'),
+-- Sneha Rao (Crossfit)
+(4, '2026-09-28', '06:30:00', '07:30:00', 'AVAILABLE'),
+(4, '2026-09-28', '18:30:00', '19:30:00', 'AVAILABLE'),
+-- Rajesh Verma (Cardio)
+(5, '2026-09-28', '06:00:00', '07:00:00', 'AVAILABLE'),
+(5, '2026-09-28', '17:00:00', '18:00:00', 'AVAILABLE');
+
+-- 7. Trainer Requests
+INSERT INTO trainer_request (customer_id, trainer_id, slot_id, request_date, message, status) VALUES
+(1, 1, 1, '2026-09-26', 'Hi Ravi sir, need strength training and deadlift form check.', 'ACCEPTED'),
+(2, 2, 11, '2026-09-26', 'Looking for evening restorative yoga sessions.', 'ACCEPTED'),
+(3, 3, 14, '2026-09-26', 'Focusing on upper body hypertrophy and chest development.', 'ACCEPTED'),
+(4, 1, 3, '2026-09-27', 'Need personal trainer for strength training program.', 'PENDING'),
+(5, 4, 16, '2026-09-27', 'Interested in beginner CrossFit conditioning.', 'PENDING'),
+(7, 5, 18, '2026-09-25', 'Need cardio routine for fat loss.', 'REJECTED');
+
+-- 8. Bookings (Demonstrating ONE_DAY and DAILY)
+INSERT INTO booking (customer_id, trainer_id, request_id, booking_type, start_date, end_date, created_at, status) VALUES
+-- Booking 1: DAILY recurring booking for Rahul with Ravi (28-09-2026 to 02-10-2026)
+(1, 1, 1, 'DAILY', '2026-09-28', '2026-10-02', '2026-09-26 14:00:00', 'CONFIRMED'),
+-- Booking 2: ONE_DAY booking for Ananya with Priya
+(2, 2, 2, 'ONE_DAY', '2026-09-28', '2026-09-28', '2026-09-26 15:30:00', 'CONFIRMED'),
+-- Booking 3: ONE_DAY booking for Rohit with Amit
+(3, 3, 3, 'ONE_DAY', '2026-09-28', '2026-09-28', '2026-09-26 17:00:00', 'CONFIRMED');
+
+-- 9. Booking Slots (Crucial DBMS Requirement: individual row per day for recurring bookings)
+INSERT INTO booking_slot (booking_id, slot_id, booking_date, status) VALUES
+-- Line items for DAILY Booking 1 (Ravi 6 AM-7 AM across 5 consecutive days)
+(1, 1, '2026-09-28', 'BOOKED'),
+(1, 4, '2026-09-29', 'BOOKED'),
+(1, 6, '2026-09-30', 'BOOKED'),
+(1, 7, '2026-10-01', 'BOOKED'),
+(1, 8, '2026-10-02', 'BOOKED'),
+-- Line item for ONE_DAY Booking 2
+(2, 11, '2026-09-28', 'BOOKED'),
+-- Line item for ONE_DAY Booking 3
+(3, 14, '2026-09-28', 'BOOKED');
+
+-- 10. Equipment (Gym inventory items)
+INSERT INTO equipment (equipment_name, description, total_quantity, available_quantity, status) VALUES
+('Treadmill Commercial Pro', 'Heavy duty motor 4.0 HP with incline control & heart rate monitor', 8, 7, 'AVAILABLE'),
+('Olympic Barbell Set 20kg', 'Standard 7ft chrome Olympic barbell with safety collars', 12, 10, 'AVAILABLE'),
+('Adjustable Dumbbell Pair 2.5-30kg', 'Quick-select dial dumbbell pair with storage rack', 10, 8, 'AVAILABLE'),
+('Hex Rubber Kettlebell Set', 'Cast iron kettlebells ranging from 8kg to 24kg', 15, 14, 'AVAILABLE'),
+('Lat Pulldown & Low Row Combo', 'Cable selectorized dual station with 100kg weight stack', 4, 3, 'AVAILABLE'),
+('Smith Machine 3D', 'Dual-axis guided barbell machine with safety stoppers', 2, 2, 'AVAILABLE'),
+('Multi-Angle Adjustable Bench', 'Incline, flat, and decline bench with wheels', 10, 9, 'AVAILABLE'),
+('Cable Crossover Station', 'Functional dual adjustable pulley trainer with accessories', 2, 1, 'LOW_STOCK');
+
+-- 11. Equipment Requests
+INSERT INTO equipment_request (trainer_id, equipment_id, quantity, reason, priority, request_date, status) VALUES
+(1, 2, 1, 'Need an extra Olympic barbell set for morning powerlifting batch.', 'HIGH', '2026-09-26', 'APPROVED'),
+(2, 7, 1, 'Adjustable bench required for core strengthening yoga routines.', 'MEDIUM', '2026-09-26', 'APPROVED'),
+(4, 4, 2, 'Additional kettlebells needed for afternoon HIIT circuit.', 'HIGH', '2026-09-27', 'PENDING'),
+(3, 1, 1, 'Treadmill required for client pre-workout cardio warmup.', 'LOW', '2026-09-27', 'PENDING');
+
+-- 12. Gym Access QR (Tokens generated upon payment/active membership)
+INSERT INTO gym_access_qr (customer_id, membership_id, qr_token, valid_from, valid_until, status) VALUES
+(1, 1, 'QR-GMS-CUST1-20260115-VIP', '2026-01-15', '2027-01-14', 'ACTIVE'),
+(2, 2, 'QR-GMS-CUST2-20260801-PREM', '2026-08-01', '2026-10-31', 'ACTIVE'),
+(3, 3, 'QR-GMS-CUST3-20260901-GOLD', '2026-09-01', '2026-09-30', 'ACTIVE'),
+(4, 4, 'QR-GMS-CUST4-20260401-ELITE', '2026-04-01', '2026-09-30', 'ACTIVE'),
+(5, 5, 'QR-GMS-CUST5-20260415-VIP', '2026-04-15', '2027-04-14', 'ACTIVE'),
+(6, 6, 'QR-GMS-CUST6-20260801-EXP', '2026-08-01', '2026-08-31', 'EXPIRED'),
+(7, 7, 'QR-GMS-CUST7-20260701-PREM', '2026-07-01', '2026-09-30', 'ACTIVE'),
+(8, 8, 'QR-GMS-CUST8-20260605-VIP', '2026-06-05', '2027-06-04', 'ACTIVE'),
+(9, 9, 'QR-GMS-CUST9-20260910-GOLD', '2026-09-10', '2026-10-09', 'ACTIVE'),
+(10, 10, 'QR-GMS-CUST10-20260715-PREM', '2026-07-15', '2026-10-14', 'ACTIVE');
+
+
+-- ============================================================================
+-- DEMONSTRATION SQL QUERIES (DBMS Viva & Evaluation Suite)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- SECTION A: BASIC CRUD OPERATIONS
+-- ----------------------------------------------------------------------------
+
+-- 1. INSERT: Register a new customer
+-- INSERT INTO customer (name, email, password, phone, address, registration_date)
+-- VALUES ('Karan Malhotra', 'karan@gmail.com', 'pass123', '9988776655', 'Indiranagar, Bengaluru', CURDATE());
+
+-- 2. SELECT: Retrieve all available trainers
+SELECT trainer_id, name, specialization, experience_years, salary, availability_status 
+FROM trainer 
+WHERE availability_status = 'AVAILABLE';
+
+-- 3. UPDATE: Update equipment available count when maintenance completes
+-- UPDATE equipment SET available_quantity = available_quantity + 1, status = 'AVAILABLE' WHERE equipment_id = 8;
+
+-- 4. DELETE: Remove an expired or cancelled pending request
+-- DELETE FROM trainer_request WHERE request_id = 999 AND status = 'CANCELLED';
+
+-- ----------------------------------------------------------------------------
+-- SECTION B: FILTERING & PATTERN MATCHING (WHERE, ORDER BY, LIKE, BETWEEN)
+-- ----------------------------------------------------------------------------
+
+-- 5. Find customers whose names start with 'R' or 'A'
+SELECT customer_id, name, email, phone 
+FROM customer 
+WHERE name LIKE 'R%' OR name LIKE 'A%'
+ORDER BY name ASC;
+
+-- 6. Find all payments between ₹3000 and ₹15000 ordered by amount descending
+SELECT payment_id, customer_id, amount, payment_date, payment_method, payment_status
+FROM payment
+WHERE amount BETWEEN 3000.00 AND 15000.00
+ORDER BY amount DESC;
+
+-- ----------------------------------------------------------------------------
+-- SECTION C: AGGREGATE FUNCTIONS & GROUPING (COUNT, SUM, AVG, MAX, MIN, GROUP BY, HAVING)
+-- ----------------------------------------------------------------------------
+
+-- 7. Gym financial and operational summary metrics
+SELECT 
+    COUNT(DISTINCT customer_id) AS total_customers,
+    COUNT(DISTINCT membership_id) AS total_memberships,
+    SUM(amount) AS total_revenue_collected,
+    AVG(amount) AS average_payment_amount,
+    MAX(amount) AS highest_plan_sold,
+    MIN(amount) AS lowest_plan_sold
+FROM payment
+WHERE payment_status = 'SUCCESS';
+
+-- 8. Trainer salary statistics by specialization
+SELECT 
+    specialization,
+    COUNT(trainer_id) AS total_trainers,
+    AVG(salary) AS avg_salary,
+    MAX(salary) AS max_salary,
+    MIN(salary) AS min_salary
+FROM trainer
+GROUP BY specialization
+ORDER BY avg_salary DESC;
+
+-- 9. Customers with total payments greater than ₹5000 (GROUP BY + HAVING)
+SELECT 
+    c.customer_id,
+    c.name,
+    COUNT(p.payment_id) AS total_transactions,
+    SUM(p.amount) AS total_spent
+FROM customer c
+JOIN payment p ON c.customer_id = p.customer_id
+WHERE p.payment_status = 'SUCCESS'
+GROUP BY c.customer_id, c.name
+HAVING SUM(p.amount) >= 5000.00
+ORDER BY total_spent DESC;
+
+-- ----------------------------------------------------------------------------
+-- SECTION D: 6 DEMONSTRATION JOINS (INNER JOIN & LEFT JOIN)
+-- ----------------------------------------------------------------------------
+
+-- JOIN DEMO 1: Customer + Membership (Show member plans and validity)
+SELECT 
+    c.customer_id,
+    c.name AS customer_name,
+    c.phone,
+    m.plan_name,
+    m.amount,
+    m.start_date,
+    m.end_date,
+    m.status AS membership_status
+FROM customer c
+INNER JOIN membership m ON c.customer_id = m.customer_id
+ORDER BY m.end_date DESC;
+
+-- JOIN DEMO 2: Customer + Payment (Full payment audit trail)
+SELECT 
+    c.customer_id,
+    c.name AS customer_name,
+    p.payment_id,
+    p.amount,
+    p.payment_method,
+    p.payment_date,
+    p.payment_status,
+    p.transaction_reference
+FROM customer c
+INNER JOIN payment p ON c.customer_id = p.customer_id
+ORDER BY p.payment_date DESC;
+
+-- JOIN DEMO 3: Trainer + Trainer Slot (Trainer schedule mapping)
+SELECT 
+    t.trainer_id,
+    t.name AS trainer_name,
+    t.specialization,
+    ts.slot_id,
+    ts.slot_date,
+    ts.start_time,
+    ts.end_time,
+    ts.status AS slot_status
+FROM trainer t
+LEFT JOIN trainer_slot ts ON t.trainer_id = ts.trainer_id
+ORDER BY ts.slot_date ASC, ts.start_time ASC;
+
+-- JOIN DEMO 4: Customer + Trainer Request (Pending & accepted coaching requests)
+SELECT 
+    tr.request_id,
+    c.name AS customer_name,
+    c.phone AS customer_phone,
+    t.name AS trainer_name,
+    ts.slot_date,
+    ts.start_time,
+    tr.message,
+    tr.status AS request_status
+FROM trainer_request tr
+INNER JOIN customer c ON tr.customer_id = c.customer_id
+INNER JOIN trainer t ON tr.trainer_id = t.trainer_id
+INNER JOIN trainer_slot ts ON tr.slot_id = ts.slot_id
+ORDER BY tr.request_date DESC;
+
+-- JOIN DEMO 5: Customer + Trainer + Booking + Booking Slot (Complete booking itinerary)
+SELECT 
+    b.booking_id,
+    c.name AS customer_name,
+    t.name AS trainer_name,
+    b.booking_type,
+    bs.booking_date,
+    ts.start_time,
+    ts.end_time,
+    b.status AS booking_status
+FROM booking b
+INNER JOIN customer c ON b.customer_id = c.customer_id
+INNER JOIN trainer t ON b.trainer_id = t.trainer_id
+LEFT JOIN booking_slot bs ON b.booking_id = bs.booking_id
+LEFT JOIN trainer_slot ts ON bs.slot_id = ts.slot_id
+ORDER BY bs.booking_date ASC, ts.start_time ASC;
+
+-- JOIN DEMO 6: Trainer + Equipment Request + Equipment (Equipment requisition audit)
+SELECT 
+    er.equipment_request_id,
+    t.name AS trainer_name,
+    e.equipment_name,
+    er.quantity AS requested_quantity,
+    e.available_quantity AS stock_available,
+    er.priority,
+    er.reason,
+    er.status AS request_status,
+    er.request_date
+FROM equipment_request er
+INNER JOIN trainer t ON er.trainer_id = t.trainer_id
+INNER JOIN equipment e ON er.equipment_id = e.equipment_id
+ORDER BY er.request_date DESC;
+
+-- ----------------------------------------------------------------------------
+-- SECTION E: SUBQUERIES
+-- ----------------------------------------------------------------------------
+
+-- Subquery 1: Trainers whose salary is strictly above the average trainer salary
+SELECT trainer_id, name, specialization, salary
+FROM trainer
+WHERE salary > (SELECT AVG(salary) FROM trainer)
+ORDER BY salary DESC;
+
+-- Subquery 2: Customers who have made the highest single payment
+SELECT customer_id, name, email, phone
+FROM customer
+WHERE customer_id IN (
+    SELECT customer_id FROM payment WHERE amount = (SELECT MAX(amount) FROM payment)
+);
+
+-- Subquery 3: Equipment items that currently have pending trainer requests
+SELECT equipment_id, equipment_name, available_quantity, status
+FROM equipment
+WHERE equipment_id IN (
+    SELECT DISTINCT equipment_id FROM equipment_request WHERE status = 'PENDING'
+);
+
+-- ----------------------------------------------------------------------------
+-- SECTION F: DBMS TRANSACTION DEMONSTRATION SCRIPT
+-- Payment -> Membership Activation -> QR Generation (Atomic Operation)
+-- ----------------------------------------------------------------------------
+/*
+START TRANSACTION;
+
+-- 1. Create a simulated payment record
+INSERT INTO payment (customer_id, membership_id, amount, payment_date, payment_method, payment_status, transaction_reference)
+VALUES (9, 9, 1500.00, NOW(), 'UPI - PhonePe', 'SUCCESS', 'TXN_DEMO_TRANSACTION_999');
+
+-- 2. Activate membership
+UPDATE membership 
+SET status = 'ACTIVE', start_date = CURDATE(), end_date = DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+WHERE membership_id = 9;
+
+-- 3. Generate QR Access Token
+INSERT INTO gym_access_qr (customer_id, membership_id, qr_token, valid_from, valid_until, status)
+VALUES (9, 9, CONCAT('QR-GMS-', UUID()), CURDATE(), DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'ACTIVE')
+ON DUPLICATE KEY UPDATE 
+    valid_until = DATE_ADD(CURDATE(), INTERVAL 30 DAY),
+    status = 'ACTIVE';
+
+-- If all statements succeed:
+COMMIT;
+
+-- In case of failure:
+-- ROLLBACK;
+*/

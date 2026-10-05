@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Gym Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-badge">&#127947;</div>
+            <div class="brand-text">
+                <h2>Gym Management</h2>
+                <span>Admin Console</span>
+            </div>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="active"><a href="#" onclick="showTab('tab-overview', this)"><span>&#128202;</span> <span>Overview</span></a></li>
+            <li><a href="#" onclick="showTab('tab-trainers', this)"><span>&#128170;</span> <span>Trainers</span></a></li>
+            <li><a href="#" onclick="showTab('tab-customers', this)"><span>&#128101;</span> <span>Customers</span></a></li>
+            <li><a href="#" onclick="showTab('tab-schedules', this)"><span>&#128197;</span> <span>Schedules &amp; Slots</span></a></li>
+            <li><a href="#" onclick="showTab('tab-bookings', this)"><span>&#128214;</span> <span>Bookings</span></a></li>
+            <li><a href="#" onclick="showTab('tab-equipment', this)"><span>&#127947;&#65039;</span> <span>Equipment &amp; Requests</span></a></li>
+            <li><a href="#" onclick="showTab('tab-scanner', this)"><span>&#128247;</span> <span>QR Gate Scanner</span></a></li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="avatar" id="adminAvatar">A</div>
+                <div class="user-info-text">
+                    <div class="name" id="adminName">Admin Vikram</div>
+                    <div class="role">Administrator</div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="GymAPI.logout()" title="Logout" style="color:#94a3b8; border-color: rgba(255,255,255,0.15)">
+                &#10140;
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="top-navbar">
+            <div class="page-title">
+                <h1 id="pageTitleHeading">Admin Dashboard Overview</h1>
+            </div>
+            <div class="top-nav-actions">
+                <span class="badge badge-success">&#128279; MySQL 8.0 Connected</span>
+                <button class="btn btn-primary btn-sm" onclick="loadAllAdminData()">&#8635; Refresh Data</button>
+            </div>
+        </header>
+
+        <div class="content-body">
+            
+            <!-- TAB 1: OVERVIEW & STATS -->
+            <div id="tab-overview" class="tab-panel active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">&#128170;</div>
+                        <div class="stat-details">
+                            <h3 id="statTotalTrainers">-</h3>
+                            <p>Total Trainers</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">&#128101;</div>
+                        <div class="stat-details">
+                            <h3 id="statTotalCustomers">-</h3>
+                            <p>Total Customers</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">&#128179;</div>
+                        <div class="stat-details">
+                            <h3 id="statActiveMembers">-</h3>
+                            <p>Active Members</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon amber">&#128197;</div>
+                        <div class="stat-details">
+                            <h3 id="statTodayBookings">-</h3>
+                            <p>Today's Bookings</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon rose">&#128229;</div>
+                        <div class="stat-details">
+                            <h3 id="statPendingTrainerReq">-</h3>
+                            <p>Pending Trainer Requests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon amber">&#128736;&#65039;</div>
+                        <div class="stat-details">
+                            <h3 id="statPendingEquipmentReq">-</h3>
+                            <p>Pending Equipment Requests</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon green">&#9989;</div>
+                        <div class="stat-details">
+                            <h3 id="statAvailableEquipment">-</h3>
+                            <p>Available Equipment Units</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon blue">&#8377;</div>
+                        <div class="stat-details">
+                            <h3 id="statTotalRevenue">-</h3>
+                            <p>Total Revenue Collected</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activities row -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Quick Admin Actions &bull; DBMS Operations</h2>
+                    </div>
+                    <div class="card-body" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="openAddTrainerModal()">+ Add New Trainer</button>
+                        <button class="btn btn-success" onclick="openAddEquipmentModal()">+ Add New Equipment</button>
+                        <button class="btn btn-outline" onclick="showTab('tab-equipment')">Review Equipment Requests</button>
+                        <button class="btn btn-outline" onclick="showTab('tab-customers')">View Customer Payments</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TRAINERS MANAGEMENT -->
+            <div id="tab-trainers" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Trainer Management (Table: <code>trainer</code>)</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openAddTrainerModal()">+ Add Trainer</button>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="trainersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Specialization</th>
+                                    <th>Experience</th>
+                                    <th>Qualification</th>
+                                    <th>Salary (&#8377;)</th>
+                                    <th>Availability</th>
+                                    <th>Contact</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: CUSTOMERS MANAGEMENT -->
+            <div id="tab-customers" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Customer Records (Table: <code>customer</code>, <code>membership</code>, <code>payment</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="customersTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Address</th>
+                                    <th>Registered Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: SCHEDULES & SLOTS -->
+            <div id="tab-schedules" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Trainer Slots Master (Table: <code>trainer_slot</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="slotsTable">
+                            <thead>
+                                <tr>
+                                    <th>Slot ID</th>
+                                    <th>Trainer</th>
+                                    <th>Specialization</th>
+                                    <th>Date</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: BOOKINGS MANAGEMENT -->
+            <div id="tab-bookings" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Master Bookings &bull; Session Logs (Tables: <code>booking</code>, <code>booking_slot</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="bookingsTable">
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Customer</th>
+                                    <th>Trainer</th>
+                                    <th>Booking Type</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Created At</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: EQUIPMENT & REQUESTS -->
+            <div id="tab-equipment" class="tab-panel">
+                <!-- Equipment Inventory -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Equipment Inventory (Table: <code>equipment</code>)</h2>
+                        <button class="btn btn-primary btn-sm" onclick="openAddEquipmentModal()">+ Add Equipment</button>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="equipmentTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Equipment Name</th>
+                                    <th>Description</th>
+                                    <th>Total Qty</th>
+                                    <th>Available Qty</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Trainer Requisitions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Trainer Equipment Requests (Table: <code>equipment_request</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="equipmentRequestsTable">
+                            <thead>
+                                <tr>
+                                    <th>Req ID</th>
+                                    <th>Trainer</th>
+                                    <th>Equipment</th>
+                                    <th>Requested Qty</th>
+                                    <th>Priority</th>
+                                    <th>Reason</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: QR SCANNER -->
+            <div id="tab-scanner" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Gym Entrance QR Verification Terminal</h2>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: var(--slate); margin-bottom: 20px;">
+                            Simulates physical gym turnstile access scanner. Reads customer QR tokens and verifies membership status in MySQL.
+                        </p>
+                        <div style="display: flex; gap: 12px; max-width: 600px; margin-bottom: 20px;">
+                            <input type="text" id="adminQrInput" class="form-control" placeholder="Scan or enter QR token e.g. QR-GMS-CUST1-TOKEN">
+                            <button class="btn btn-primary" onclick="adminScanQr()">Verify Entry</button>
+                        </div>
+                        <div id="adminQrResult" class="gate-screen" style="max-width: 600px; display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: ADD / EDIT TRAINER -->
+<div class="modal-overlay" id="trainerModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="trainerModalTitle">Add New Trainer</h3>
+            <button class="modal-close" onclick="closeModal('trainerModal')">&times;</button>
+        </div>
+        <form id="trainerForm" onsubmit="saveTrainer(event)">
+            <input type="hidden" id="trModalId">
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" id="trName" class="form-control" required placeholder="e.g. Ramesh Kumar">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="trEmail" class="form-control" required placeholder="ramesh@gym.com">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" id="trPhone" class="form-control" required placeholder="9876543210">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Specialization</label>
+                        <input type="text" id="trSpecialization" class="form-control" required placeholder="Strength &amp; Conditioning">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Experience (Years)</label>
+                        <input type="number" id="trExperience" class="form-control" required min="0" value="3">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monthly Salary (&#8377;)</label>
+                        <input type="number" id="trSalary" class="form-control" required min="0" step="100" value="45000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Qualification Certification</label>
+                    <input type="text" id="trQualification" class="form-control" required placeholder="ACE / ISSA / K11 Certified">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Availability Status</label>
+                    <select id="trAvailability" class="form-control">
+                        <option value="AVAILABLE">AVAILABLE</option>
+                        <option value="BUSY">BUSY</option>
+                        <option value="ON_LEAVE">ON_LEAVE</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('trainerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Trainer Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: ADD / EDIT EQUIPMENT -->
+<div class="modal-overlay" id="equipmentModal">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="equipmentModalTitle">Add New Equipment</h3>
+            <button class="modal-close" onclick="closeModal('equipmentModal')">&times;</button>
+        </div>
+        <form id="equipmentForm" onsubmit="saveEquipment(event)">
+            <input type="hidden" id="eqModalId">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Equipment Name</label>
+                    <input type="text" id="eqName" class="form-control" required placeholder="e.g. Commercial Leg Press Machine">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea id="eqDesc" class="form-control" rows="2" placeholder="Heavy-duty 45 degree angle leg press with safety stoppers"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Total Quantity</label>
+                        <input type="number" id="eqTotal" class="form-control" required min="1" value="5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Available Quantity</label>
+                        <input type="number" id="eqAvailable" class="form-control" required min="0" value="5">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('equipmentModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Equipment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL: CUSTOMER DETAILS DRILLDOWN -->
+<div class="modal-overlay" id="customerDetailModal">
+    <div class="modal-box" style="max-width: 680px;">
+        <div class="modal-header">
+            <h3 id="custDetailTitle">Customer Complete Record</h3>
+            <button class="modal-close" onclick="closeModal('customerDetailModal')">&times;</button>
+        </div>
+        <div class="modal-body" id="customerDetailBody">
+            <!-- Loaded dynamically -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="closeModal('customerDetailModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Dashboard - Gym Management System</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo-badge">&#128100;</div>
+            <div class="brand-text">
+                <h2>Gym Management</h2>
+                <span>Member Portal</span>
+            </div>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="active"><a href="#" onclick="showCustTab('tab-membership', this)"><span>&#128179;</span> <span>My Membership &amp; Pay</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-qr', this)"><span>&#128241;</span> <span>My Gym Access QR</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-trainers', this)"><span>&#128170;</span> <span>Browse Trainers</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-book', this)"><span>&#128197;</span> <span>Book Session (One/Daily)</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-mybookings', this)"><span>&#128214;</span> <span>My Bookings</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-myrequests', this)"><span>&#128229;</span> <span>My Trainer Requests</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-payments', this)"><span>&#128176;</span> <span>Payment History</span></a></li>
+            <li><a href="#" onclick="showCustTab('tab-profile', this)"><span>&#9881;&#65039;</span> <span>My Profile</span></a></li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-profile-mini">
+                <div class="avatar" id="custAvatar">C</div>
+                <div class="user-info-text">
+                    <div class="name" id="custNameHeader">Customer</div>
+                    <div class="role">Gym Member</div>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-outline" onclick="GymAPI.logout()" title="Logout" style="color:#94a3b8; border-color: rgba(255,255,255,0.15)">
+                &#10140;
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="main-wrapper">
+        <header class="top-navbar">
+            <div class="page-title">
+                <h1 id="custPageTitle">My Membership &amp; Access Status</h1>
+            </div>
+            <div class="top-nav-actions">
+                <button class="btn btn-primary btn-sm" onclick="loadCustomerDashboard()">&#8635; Refresh Data</button>
+            </div>
+        </header>
+
+        <div class="content-body">
+            
+            <!-- TAB 1: MEMBERSHIP & SIMULATED PAYMENT -->
+            <div id="tab-membership" class="tab-panel active">
+                <!-- Current Active Membership Card -->
+                <div class="card" id="activeMembershipCard">
+                    <div class="card-header">
+                        <h2>Active Membership Status (Table: <code>membership</code>)</h2>
+                        <span id="memStatusBadge" class="badge badge-success">ACTIVE</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div>
+                                <label class="form-label">Current Plan</label>
+                                <h3 id="memPlanName" style="color: var(--primary);">-</h3>
+                            </div>
+                            <div>
+                                <label class="form-label">Plan Fee</label>
+                                <h3 id="memAmount">-</h3>
+                            </div>
+                            <div>
+                                <label class="form-label">Valid From</label>
+                                <p id="memStartDate" style="font-weight:600;">-</p>
+                            </div>
+                            <div>
+                                <label class="form-label">Valid Until (Expiry)</label>
+                                <p id="memEndDate" style="font-weight:600; color: #0f172a;">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Purchase / Upgrade Plans with Simulated Payment -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Purchase / Renew Membership &bull; Simulated Payment (DBMS Transaction)</h2>
+                    </div>
+                    <div class="card-body">
+                        <p style="color: var(--slate); font-size: 14px; margin-bottom: 20px;">
+                            Select a plan below to simulate online checkout. Demonstrates an atomic database transaction: <code>Payment &rarr; Membership Activation &rarr; QR Code Generation</code>.
+                        </p>
+                        
+                        <div class="plan-grid">
+                            <div class="plan-card selected" onclick="selectPlan(this, 'Monthly Gold', 1500)">
+                                <h4>Monthly Gold</h4>
+                                <div class="price">&#8377;1,500</div>
+                                <p style="font-size: 13px; color: var(--slate);">1 Month Access &bull; All Gym Equipment &bull; Locker Access</p>
+                            </div>
+                            <div class="plan-card" onclick="selectPlan(this, 'Quarterly Premium', 4000)">
+                                <h4>Quarterly Premium</h4>
+                                <div class="price">&#8377;4,000</div>
+                                <p style="font-size: 13px; color: var(--slate);">3 Months Access &bull; Trainer Consultation &bull; Free Diet Plan</p>
+                            </div>
+                            <div class="plan-card" onclick="selectPlan(this, 'Half-Yearly Elite', 7500)">
+                                <h4>Half-Yearly Elite</h4>
+                                <div class="price">&#8377;7,500</div>
+                                <p style="font-size: 13px; color: var(--slate);">6 Months Access &bull; Group Fitness &bull; Sauna &amp; Steam</p>
+                            </div>
+                            <div class="plan-card" onclick="selectPlan(this, 'Annual VIP', 12000)">
+                                <h4>Annual VIP</h4>
+                                <div class="price">&#8377;12,000</div>
+                                <p style="font-size: 13px; color: var(--slate);">12 Months Access &bull; Unlimited Personal Coaching Perks</p>
+                            </div>
+                        </div>
+
+                        <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--slate-border); max-width: 500px; margin-top: 20px;">
+                            <h4 style="margin-bottom: 12px; font-size: 15px;">Simulated Payment Checkout</h4>
+                            <div class="form-group">
+                                <label class="form-label">Payment Method</label>
+                                <select id="paymentMethodSelect" class="form-control">
+                                    <option value="UPI - PhonePe">UPI - PhonePe (Fast)</option>
+                                    <option value="UPI - GooglePay">UPI - GooglePay</option>
+                                    <option value="Credit Card - HDFC">Credit Card (Visa/Mastercard)</option>
+                                    <option value="Net Banking - SBI">Net Banking</option>
+                                    <option value="Cash at Front Desk">Cash (Simulated)</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-success" style="width: 100%; padding: 12px;" onclick="executeSimulatedPayment()">
+                                Complete Simulated Payment (&#8377;<span id="payAmountBtn">1,500</span>) &rarr;
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: MY GYM ACCESS QR -->
+            <div id="tab-qr" class="tab-panel">
+                <div class="card" style="max-width: 700px; margin: 0 auto;">
+                    <div class="card-header">
+                        <h2>My Digital Gym Access Pass (Table: <code>gym_access_qr</code>)</h2>
+                        <span id="qrStatusBadge" class="badge badge-success">ACTIVE</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="qr-card-container">
+                            <h3 id="qrCustName">Member Name</h3>
+                            <p style="color: var(--slate); font-size: 13px; margin-top: 4px;" id="qrCustPlan">Plan: Annual VIP</p>
+
+                            <!-- Clean Vector SVG QR Renderer -->
+                            <div class="qr-box" id="qrCanvasBox"></div>
+
+                            <div>
+                                <span style="font-size: 12px; color: var(--slate); display: block;">Access QR Token:</span>
+                                <span class="qr-token-text" id="qrTokenString">QR-GMS-XXXX-TOKEN</span>
+                            </div>
+                            <p style="font-size: 13px; color: var(--slate); margin-top: 8px;">
+                                Valid Until: <b id="qrValidUntil" style="color: var(--dark);">-</b>
+                            </p>
+                        </div>
+
+                        <!-- Turnstile Gate Simulator Test button -->
+                        <div style="margin-top: 24px; text-align: center;">
+                            <button class="btn btn-primary" onclick="testMyQrAtGate()">
+                                &#128682; Test Scan My QR at Turnstile Gate &rarr;
+                            </button>
+                            <div id="custGateResult" class="gate-screen" style="display: none; margin-top: 16px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: BROWSE TRAINERS -->
+            <div id="tab-trainers" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Certified Personal Trainers (Table: <code>trainer</code>)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="plan-grid" id="trainersListGrid">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: BOOK SESSION (ONE DAY & DAILY) -->
+            <div id="tab-book" class="tab-panel">
+                <div class="card" style="max-width: 800px;">
+                    <div class="card-header">
+                        <h2>Schedule Trainer Coaching Session</h2>
+                        <span class="badge badge-info">Double-Booking Protection Active</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Select Booking Mode</label>
+                            <div class="role-selector" style="max-width: 380px;">
+                                <button type="button" class="role-btn active" id="btnModeOne" onclick="switchBookingMode('ONE_DAY')">ONE DAY Booking</button>
+                                <button type="button" class="role-btn" id="btnModeDaily" onclick="switchBookingMode('DAILY')">DAILY Recurring Booking</button>
+                            </div>
+                        </div>
+
+                        <form id="bookingForm" onsubmit="handleSessionBooking(event)">
+                            <div class="form-group">
+                                <label class="form-label">Select Trainer</label>
+                                <select id="bookTrainerSelect" class="form-control" required onchange="handleTrainerSelectionChange()">
+                                    <!-- Injected via JS -->
+                                </select>
+                            </div>
+
+                            <!-- ONE DAY FIELDS -->
+                            <div id="oneDaySection">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Session Date</label>
+                                        <input type="date" id="bookOneDate" class="form-control" onchange="loadAvailableSlotsForBooking()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Available Trainer Slot</label>
+                                        <select id="bookSlotSelect" class="form-control">
+                                            <option value="">-- Choose Slot --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DAILY RECURRING FIELDS -->
+                            <div id="dailySection" style="display: none;">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Start Date</label>
+                                        <input type="date" id="bookDailyStart" class="form-control">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">End Date</label>
+                                        <input type="date" id="bookDailyEnd" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label class="form-label">Daily Start Time</label>
+                                        <input type="time" id="bookDailyTime" class="form-control" value="06:00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Daily End Time</label>
+                                        <input type="time" id="bookDailyEndTime" class="form-control" value="07:00">
+                                    </div>
+                                </div>
+                                <small style="color: var(--slate); display:block; margin-bottom: 12px;">
+                                    * The system will create individual line items in <code>booking_slot</code> for each calendar day in the range. If any date is already booked, the system prevents double booking.
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">Message / Workout Goals</label>
+                                <textarea id="bookMessage" class="form-control" rows="2" placeholder="e.g. Focus on deadlifts, shoulder mobility, and posture correction"></textarea>
+                            </div>
+
+                            <div style="display: flex; gap: 12px;">
+                                <button type="submit" class="btn btn-primary">Confirm Booking &rarr;</button>
+                                <button type="button" class="btn btn-outline" onclick="handleSendTrainerRequest()">Send as Trainer Request</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: MY BOOKINGS -->
+            <div id="tab-mybookings" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>My Confirmed Coaching Bookings (Table: <code>booking</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="myBookingsTable">
+                            <thead>
+                                <tr>
+                                    <th>Booking ID</th>
+                                    <th>Trainer</th>
+                                    <th>Specialization</th>
+                                    <th>Booking Type</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: MY REQUESTS -->
+            <div id="tab-myrequests" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>My Sent Trainer Requests (Table: <code>trainer_request</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="myRequestsTable">
+                            <thead>
+                                <tr>
+                                    <th>Req ID</th>
+                                    <th>Trainer</th>
+                                    <th>Slot Date</th>
+                                    <th>Time</th>
+                                    <th>Message</th>
+                                    <th>Request Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: PAYMENT HISTORY -->
+            <div id="tab-payments" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Transaction Audit Trail (Table: <code>payment</code>)</h2>
+                    </div>
+                    <div class="card-body table-responsive">
+                        <table class="custom-table" id="myPaymentsTable">
+                            <thead>
+                                <tr>
+                                    <th>Txn ID</th>
+                                    <th>Plan</th>
+                                    <th>Amount (&#8377;)</th>
+                                    <th>Date &amp; Time</th>
+                                    <th>Payment Method</th>
+                                    <th>Status</th>
+                                    <th>Reference ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 8: PROFILE -->
+            <div id="tab-profile" class="tab-panel">
+                <div class="card" style="max-width: 650px;">
+                    <div class="card-header">
+                        <h2>Customer Profile (Table: <code>customer</code>)</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Full Name</label>
+                            <h3 id="custProfName">-</h3>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <p id="custProfEmail">-</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Phone Number</label>
+                            <p id="custProfPhone">-</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Residential Address</label>
+                            <p id="custProfAddress">-</p>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Registration Date</label>
+                            <p id="custProfRegDate">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/customer.js"></script>
+</body>
+</html>
